@@ -1,0 +1,43 @@
+{
+  "scenario": "meera_work",
+  "user_id": "meera",
+  "threads": [
+    {"thread_id": "A", "messages": [
+      {"at": "2026-10-02 14:00", "role": "user", "content": "I'm Meera, a data analyst at Finlytics. My manager is Karan."},
+      {"at": "2026-10-02 14:00", "role": "assistant", "content": "Hi Meera! Happy to help with your analytics work at Finlytics."},
+      {"at": "2026-10-02 14:05", "role": "user", "content": "Our main dashboard project is code-named ORION-7."},
+      {"at": "2026-10-02 14:05", "role": "assistant", "content": "Got it, ORION-7 is your main dashboard project."}
+    ]},
+    {"thread_id": "B", "messages": [
+      {"at": "2026-10-10 10:00", "role": "user", "content": "For ORION-7 we're moving the dashboards from Tableau to Power BI."},
+      {"at": "2026-10-10 10:00", "role": "assistant", "content": "Understood, ORION-7 is migrating from Tableau to Power BI."}
+    ]},
+    {"thread_id": "A", "messages": [
+      {"at": "2026-10-18 16:00", "role": "user", "content": "Karan asked me to finish the ORION-7 migration by Nov 15."},
+      {"at": "2026-10-18 16:00", "role": "assistant", "content": "Noted, the ORION-7 migration deadline is Nov 15."}
+    ]}
+  ],
+  "distractor_sessions": [
+    [["My friend Divya at DataCorp is moving her dashboards to Looker by Dec 1.", "Good luck to Divya with the Looker migration."]],
+    [["Karan's birthday is on Nov 3, any gift ideas?", "A nice notebook, a plant, or a book he'd enjoy."]],
+    [["Another team runs a project called ORION-3 that stays on Tableau.", "Got it, ORION-3 is a separate project that stays on Tableau."]]
+  ],
+  "expected_memories": {
+    "current": ["Meera is a data analyst at Finlytics", "manager is Karan", "ORION-7 moving to Power BI", "ORION-7 migration deadline Nov 15"],
+    "old": []
+  },
+  "questions": [
+    {"asked_at": "2026-10-25 10:00", "question": "Which BI tool is ORION-7 moving to?", "category": "names_codes",
+     "expected_answer": "Power BI", "must_include": ["Power BI"], "must_not_include": [],
+     "expected_evidence": ["ORION-7 moving from Tableau to Power BI"]},
+    {"asked_at": "2026-10-25 10:00", "question": "What deadline did my manager give me?", "category": "cross_thread",
+     "expected_answer": "Finish the ORION-7 migration by Nov 15", "must_include": ["15"], "must_not_include": [],
+     "expected_evidence": ["Karan asked to finish ORION-7 migration by Nov 15"]},
+    {"asked_at": "2026-10-25 10:00", "question": "Who is my manager?", "category": "simple_recall",
+     "expected_answer": "Karan", "must_include": ["Karan"], "must_not_include": [],
+     "expected_evidence": ["manager is Karan"]},
+    {"asked_at": "2026-10-25 10:00", "question": "Which company do I work at?", "category": "simple_recall",
+     "expected_answer": "Finlytics", "must_include": ["Finlytics"], "must_not_include": [],
+     "expected_evidence": ["Meera works at Finlytics"]}
+  ]
+}

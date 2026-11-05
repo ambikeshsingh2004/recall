@@ -1,0 +1,46 @@
+{
+  "scenario": "arjun_fitness",
+  "user_id": "arjun",
+  "threads": [
+    {"thread_id": "A", "messages": [
+      {"at": "2026-09-01 07:30", "role": "user", "content": "I'm Arjun. I'm training for the Mumbai half marathon in January and I run 4 days a week."},
+      {"at": "2026-09-01 07:30", "role": "assistant", "content": "Great goal, Arjun! Four days a week is a solid base for a half marathon."},
+      {"at": "2026-09-01 07:35", "role": "user", "content": "I'm vegetarian, so any meal suggestions should be meat-free."},
+      {"at": "2026-09-01 07:35", "role": "assistant", "content": "Understood, I'll only suggest vegetarian meals."}
+    ]},
+    {"thread_id": "B", "messages": [
+      {"at": "2026-10-20 19:00", "role": "user", "content": "Bad news, I hurt my left knee today, so I've paused running and switched to swimming for now."},
+      {"at": "2026-10-20 19:00", "role": "assistant", "content": "Sorry to hear that. Swimming is great low-impact cardio while your knee recovers."}
+    ]},
+    {"thread_id": "C", "messages": [
+      {"at": "2026-10-27 08:00", "role": "user", "content": "Knee is better! I'm back to running, but only 3 days a week now."},
+      {"at": "2026-10-27 08:00", "role": "assistant", "content": "Glad you're recovering. Three days a week is a sensible way to ease back in."}
+    ]}
+  ],
+  "distractor_sessions": [
+    [["My friend Rohan is training for the Pune full marathon in December, he runs 6 days a week.", "Impressive commitment from Rohan!"]],
+    [["My brother eats chicken every day for protein, is that healthy?", "Lean chicken can be part of a healthy diet in moderation."]],
+    [["I watched a documentary about ultramarathons yesterday, wild stuff.", "Ultramarathons really are amazing feats of endurance."]]
+  ],
+  "expected_memories": {
+    "current": ["training for Mumbai half marathon in January", "runs 3 days a week", "vegetarian"],
+    "old": ["runs 4 days a week"]
+  },
+  "questions": [
+    {"asked_at": "2026-10-30 09:00", "question": "How many days a week am I running?", "category": "knowledge_update",
+     "expected_answer": "3 days a week", "must_include": ["3"], "must_not_include": [],
+     "expected_evidence": ["back to running 3 days a week"]},
+    {"asked_at": "2026-10-30 09:00", "question": "When did I hurt my knee?", "category": "temporal",
+     "expected_answer": "On Oct 20, 2026 (about 10 days ago)", "must_include": ["20"], "must_not_include": [],
+     "expected_evidence": ["hurt left knee on Oct 20"]},
+    {"asked_at": "2026-10-30 09:00", "question": "Suggest a high-protein dinner for me.", "category": "instruction_following",
+     "expected_answer": "A vegetarian (meat-free) high-protein dinner", "must_include": [], "must_not_include": ["chicken", "beef", "fish", "mutton"],
+     "expected_evidence": ["Arjun is vegetarian"]},
+    {"asked_at": "2026-10-30 09:00", "question": "What race am I training for?", "category": "simple_recall",
+     "expected_answer": "The Mumbai half marathon in January", "must_include": ["Mumbai"], "must_not_include": [],
+     "expected_evidence": ["training for the Mumbai half marathon"]},
+    {"asked_at": "2026-10-30 09:00", "question": "What finish time am I aiming for in the race?", "category": "abstention",
+     "expected_answer": "Unknown: a target time was never mentioned", "must_include": [], "must_not_include": [],
+     "expected_evidence": []}
+  ]
+}

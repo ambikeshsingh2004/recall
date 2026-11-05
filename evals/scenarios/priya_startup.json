@@ -1,0 +1,57 @@
+{
+  "scenario": "priya_startup",
+  "user_id": "priya",
+  "threads": [
+    {"thread_id": "A", "messages": [
+      {"at": "2026-10-05 10:00", "role": "user", "content": "Hi, I'm Priya. I'm building a customer-support chatbot startup called HelpLoop. Our backend is Flask with Postgres, and the investor demo is on Nov 20."},
+      {"at": "2026-10-05 10:00", "role": "assistant", "content": "Nice to meet you, Priya! HelpLoop sounds great. Good luck preparing for the Nov 20 investor demo."},
+      {"at": "2026-10-05 10:05", "role": "user", "content": "My cofounder Rahul handles sales. He wants us to offer a free tier."},
+      {"at": "2026-10-05 10:05", "role": "assistant", "content": "A free tier can drive adoption. You could cap it at 100 conversations a month."}
+    ]},
+    {"thread_id": "B", "messages": [
+      {"at": "2026-10-14 18:30", "role": "user", "content": "Update: we switched the backend from Flask to FastAPI. Also Rahul said the investor demo moved to Nov 27."},
+      {"at": "2026-10-14 18:30", "role": "assistant", "content": "Got it: FastAPI now, and the demo is on Nov 27."},
+      {"at": "2026-10-14 18:35", "role": "user", "content": "We decided on pricing: $49 per month for the Pro plan."},
+      {"at": "2026-10-14 18:35", "role": "assistant", "content": "Noted, the Pro plan is $49 per month."},
+      {"at": "2026-10-14 18:40", "role": "user", "content": "From now on please keep code examples short, just the key lines, no full files."},
+      {"at": "2026-10-14 18:40", "role": "assistant", "content": "Will do, I'll keep code examples to the key lines."}
+    ]},
+    {"thread_id": "C", "messages": [
+      {"at": "2026-10-22 11:00", "role": "user", "content": "We keep hitting bug PG-1042 in production, it's a database connection pool timeout. Any ideas?"},
+      {"at": "2026-10-22 11:00", "role": "assistant", "content": "For PG-1042, try raising the pool timeout to 30 seconds and enabling pool_pre_ping=True so stale connections are detected."}
+    ]}
+  ],
+  "distractor_sessions": [
+    [["My sister Ananya's college fest is on Nov 25, I promised I'd attend.", "That sounds fun! Enjoy the fest on Nov 25."]],
+    [["A friend's startup, ChatNest, uses Django and charges $29 a month for their plan.", "Interesting, Django is a solid choice for ChatNest."]],
+    [["Rahul took the team out for biryani today, he wants to make it a monthly thing.", "Sounds like a nice team tradition!"]],
+    [["I'm reading The Mom Test to get better at customer interviews.", "Great pick, it's very practical for customer conversations."]]
+  ],
+  "expected_memories": {
+    "current": ["backend uses FastAPI", "investor demo is on Nov 27", "Pro plan costs $49 per month", "Rahul is the cofounder handling sales", "keep code examples short"],
+    "old": ["backend used Flask", "investor demo on Nov 20"]
+  },
+  "questions": [
+    {"asked_at": "2026-10-28 09:00", "question": "When is our investor demo?", "category": "knowledge_update",
+     "expected_answer": "Nov 27", "must_include": ["27"], "must_not_include": [],
+     "expected_evidence": ["the demo moved to Nov 27"]},
+    {"asked_at": "2026-10-28 09:00", "question": "What backend framework are we using?", "category": "knowledge_update",
+     "expected_answer": "FastAPI", "must_include": ["FastAPI"], "must_not_include": [],
+     "expected_evidence": ["switched the backend to FastAPI"]},
+    {"asked_at": "2026-10-28 09:00", "question": "What framework did we use before the current one?", "category": "history",
+     "expected_answer": "Flask", "must_include": ["Flask"], "must_not_include": [],
+     "expected_evidence": ["backend was Flask before switching to FastAPI"]},
+    {"asked_at": "2026-10-28 09:00", "question": "What does my cofounder want, and what price did we pick for Pro?", "category": "multi_part",
+     "expected_answer": "Rahul wants a free tier; Pro costs $49 per month", "must_include": ["free", "49"], "must_not_include": [],
+     "expected_evidence": ["Rahul wants a free tier", "Pro plan is $49 per month"]},
+    {"asked_at": "2026-10-28 09:00", "question": "What did you suggest for PG-1042?", "category": "assistant_recall",
+     "expected_answer": "Raise the pool timeout to 30 seconds and enable pool_pre_ping=True", "must_include": ["30"], "must_not_include": [],
+     "expected_evidence": ["assistant suggested raising pool timeout to 30s and pool_pre_ping for PG-1042"]},
+    {"asked_at": "2026-10-28 09:00", "question": "What is Rahul's phone number?", "category": "abstention",
+     "expected_answer": "Unknown: it was never mentioned", "must_include": [], "must_not_include": [],
+     "expected_evidence": []},
+    {"asked_at": "2026-10-28 09:00", "question": "Show me how to add a GET endpoint that returns a health status.", "category": "instruction_following",
+     "expected_answer": "A short code example with only the key lines (Priya asked for short code, no full files), ideally using FastAPI", "must_include": [], "must_not_include": [],
+     "expected_evidence": ["Priya wants short code examples with only key lines"]}
+  ]
+}
