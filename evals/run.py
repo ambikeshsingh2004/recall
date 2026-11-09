@@ -12,6 +12,7 @@ import logging
 import os
 import time
 from collections import defaultdict
+from concurrent.futures import ThreadPoolExecutor
 from datetime import UTC, datetime
 from pathlib import Path
 
@@ -160,6 +161,29 @@ def report(results: list[dict], storing: dict, modes: list[str], run_id: str, pa
     return "\n".join(lines)
 
 
+def run_scenario_mode(scenario: dict, m: str, run_id: str) -> tuple[list[dict], float | None, int]:
+    """Replay one scenario through one mode and ask its questions. Returns (results, storing score, errors)."""
+    name = scenario["scenario"]
+    user_id = f"eval-{run_id}-{name}-{m}"  # fresh state per mode and scenario (§15.2)
+    mode = get_mode(m)
+    t0 = time.perf_counter()
+    errs = replay(mode, user_id, scenario)
+    print(f"[{name}/{m}] replayed in {time.perf_counter() - t0:.0f}s, errors={errs}", flush=True)
+    stored = storing_check(user_id, scenario.get("expected_memories", {})) if m == "ours" else None
+    results = []
+    for i, q in enumerate(scenario["questions"]):
+        try:
+            r = run_question(mode, user_id, q, i)
+        except Exception as e:  # keep going; record the failure
+            r = {"question": q["question"], "category": q["category"], "expected": q["expected_answer"],
+                 "answer": f"ERROR: {e}", "correct": False, "evidence": False, "judge_reason": "error",
+                 "text_checks": False, "memory_tokens": 0, "context_ms": 0, "retrieved_notes": None}
+        r |= {"mode": m, "scenario": name}
+        results.append(r)
+        print(f"  [{name}/{m}] {'PASS' if r['correct'] else 'FAIL'}  {q['question']}", flush=True)
+    return results, stored, errs
+
+
 def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--modes", default=",".join(MODE_NAMES))
@@ -171,6 +195,7 @@ def main() -> None:
         default=None,
         help="simulate a small context window: max memory tokens for every mode (full, rag and ours alike)",
     )
+    ap.add_argument("--workers", type=int, default=1, help="scenario/mode pairs to run in parallel")
     args = ap.parse_args()
     modes = [m.strip() for m in args.modes.split(",")]
     if args.memory_budget:
@@ -184,29 +209,20 @@ def main() -> None:
     out_dir = RESULTS_DIR / run_id
     out_dir.mkdir(parents=True, exist_ok=True)
 
+    scenarios = [pad_scenario(json.loads(Path(p).read_text(encoding="utf-8")), args.pad)
+                 for p in sorted(glob.glob(args.scenarios))]
+    jobs = [(s, m) for s in scenarios for m in modes]
+    # Each (scenario, mode) pair is independent (own user_id), so they can run in parallel. The LLM server
+    # (Ollama, or a hosted API) works on several requests at once; with one worker the run is sequential.
+    with ThreadPoolExecutor(max_workers=max(args.workers, 1)) as pool:
+        outcomes = list(pool.map(lambda job: run_scenario_mode(job[0], job[1], run_id), jobs))
+
     results, storing, errors = [], {}, 0
-    for path in sorted(glob.glob(args.scenarios)):
-        scenario = pad_scenario(json.loads(Path(path).read_text(encoding="utf-8")), args.pad)
-        name = scenario["scenario"]
-        for m in modes:
-            user_id = f"eval-{run_id}-{name}-{m}"  # fresh state per mode and scenario (§15.2)
-            mode = get_mode(m)
-            t0 = time.perf_counter()
-            errs = replay(mode, user_id, scenario)
-            errors += errs
-            print(f"[{name}/{m}] replayed in {time.perf_counter() - t0:.0f}s, errors={errs}", flush=True)
-            if m == "ours":
-                storing[(m, name)] = storing_check(user_id, scenario.get("expected_memories", {}))
-            for i, q in enumerate(scenario["questions"]):
-                try:
-                    r = run_question(mode, user_id, q, i)
-                except Exception as e:  # keep going; record the failure
-                    r = {"question": q["question"], "category": q["category"], "expected": q["expected_answer"],
-                         "answer": f"ERROR: {e}", "correct": False, "evidence": False, "judge_reason": "error",
-                         "text_checks": False, "memory_tokens": 0, "context_ms": 0, "retrieved_notes": None}
-                r |= {"mode": m, "scenario": name}
-                results.append(r)
-                print(f"  {'PASS' if r['correct'] else 'FAIL'}  {q['question']}", flush=True)
+    for (scenario, m), (rs, stored, errs) in zip(jobs, outcomes, strict=True):
+        results += rs
+        errors += errs
+        if m == "ours":
+            storing[(m, scenario["scenario"])] = stored
 
     (out_dir / "results.jsonl").write_text(
         "\n".join(json.dumps(r, ensure_ascii=False, default=str) for r in results), encoding="utf-8"

@@ -21,7 +21,6 @@ class EntityAlias(BaseModel):
 
 
 class ExtractedNotes(BaseModel):
-    user_name: str | None = None  # the user's own name, if stated
     notes: list[ExtractedNote] = []
     aliases: list[EntityAlias] = []
     forget: list[str] = []       # descriptions of things the user asked to forget (FR-S15)

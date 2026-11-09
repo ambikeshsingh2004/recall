@@ -32,7 +32,6 @@ Rules:
 - Skip greetings and small talk. Extract only from NEW MESSAGES; EARLIER CONTEXT is only for understanding.
 - importance 0-1: how useful this is for future conversations. confidence 0-1: lower for uncertain statements.
 - occurred_at: YYYY-MM-DD for events, otherwise null.
-- user_name: the user's own first name if they state it in NEW MESSAGES, otherwise null.
 - entities: exact names of other people, projects, products, places and codes in the note. Never the user themself.
 - aliases: when the user refers to a person or thing by a role or nickname, add it,
   e.g. {{"name": "Rahul", "alias": "my cofounder"}}.
@@ -52,6 +51,8 @@ NEW MESSAGES:
 RECONCILE = """For each NEW note, decide which OLD notes it replaces, meaning the OLD note is no longer true
 because of the NEW note. OLD notes that are still true alongside the NEW note are NOT replaced
 (for example, a new hobby does not replace an old hobby; a new deadline does replace the old deadline for the same thing).
+A NEW note describing a change ("the release date changed to Dec 9", "moved to March") replaces the OLD note that
+states the previous value of that same thing. A NEW event that does not change an OLD fact replaces nothing.
 
 {pairs}
 

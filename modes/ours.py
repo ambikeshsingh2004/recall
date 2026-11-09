@@ -3,7 +3,7 @@
 from collections.abc import Callable
 from datetime import datetime
 
-from memory_core import messages, query, retrieval, storing, threads
+from memory_core import messages, query, rawturns, reranker, retrieval, storing, threads
 from memory_core.config import get_settings
 from memory_core.util import estimate_tokens, fmt_date
 from modes.base import Context, MemoryMode, Message, thread_messages
@@ -27,6 +27,7 @@ class OursMode(MemoryMode):
         if message.role == "assistant":
             prev = messages.last_user_message(user_id, thread_id, msg_id)
             ids = [prev["id"], msg_id] if prev else [msg_id]
+            rawturns.index_turn(user_id, thread_id, msg_id, message.content, now)  # backup channel (fix 5)
             self.run_job(storing.store_turn, user_id, thread_id, ids, now)
         return msg_id
 
@@ -76,7 +77,12 @@ class OursMode(MemoryMode):
             user_name=user_name,
         )
         add("notes", "[Relevant memories]\n" + retrieval.format_groups(subqueries, groups))
-        # 3. Background context only if space remains.
+        # 3. Backup (fix 5): if no note passed the reranker cutoff, add the best raw past message too,
+        #    so Recall never does worse than plain RAG when the note-taker missed something.
+        raw_used = False
+        if s.use_raw_backup and retrieval.is_weak(groups):
+            raw_used = self._add_raw_backup(user_id, question, user_name, budget - used - 10, add)
+        # 4. Background context only if space remains.
         if profile := threads.get_profile(user_id):
             add("profile", f"[Profile]\n{profile}")
         current = threads.get_summary(user_id, thread_id)
@@ -85,7 +91,7 @@ class OursMode(MemoryMode):
         if other := threads.other_recent_summary(user_id, thread_id):
             add("other", f"[Other recent conversation, last active {fmt_date(other['last_active_at'])}]\n{other['summary']}")
 
-        order = ("profile", "instructions", "other", "current", "notes")
+        order = ("profile", "instructions", "other", "current", "notes", "raw")
         memory = "\n\n".join(sections[k] for k in order if k in sections)
         notes = [n for g in groups for n in g]
         return Context(
@@ -96,9 +102,25 @@ class OursMode(MemoryMode):
                 "analyzed": analyzed,
                 "subqueries": [sq.model_dump(mode="json") for sq in subqueries],
                 "notes": [
-                    {"text": retrieval.format_note(n), "score": n["score"], "final": n["final"], "ranks": n["ranks"]}
+                    {"text": retrieval.format_note(n), "score": n["score"], "final": n["final"], "ranks": n["ranks"],
+                     "fallback": n.get("fallback", False)}
                     for n in notes
                 ],
                 "sections": [k for k in order if k in sections],
+                "raw_backup": raw_used,
             },
         )
+
+    @staticmethod
+    def _add_raw_backup(user_id: str, question: str, user_name: str | None, room: int, add) -> bool:
+        """Add the best-matching raw past turn, cut to the remaining room. Returns whether one was added."""
+        if room < 40:
+            return False
+        turns = rawturns.search(user_id, question, 3)
+        if not turns:
+            return False
+        scores = reranker.score(retrieval.personalize(question, user_name or "the user"), [t["text"] for t in turns])
+        best = max(zip(scores, turns, strict=True), key=lambda pair: pair[0])[1]
+        text = best["text"] if estimate_tokens(best["text"]) <= room - 10 else best["text"][: (room - 10) * 4] + " ..."
+        add("raw", "[Possibly relevant past message, verbatim]\n" + text)
+        return True

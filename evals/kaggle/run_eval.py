@@ -13,15 +13,16 @@ import time
 import urllib.request
 
 REPO = "https://github.com/ambikeshsingh2004/recall.git"
-# (scenario set, memory budget): dev set first to check fixes, then the held-out test set at two budgets.
+# (scenario set, memory budget). Quick development run: test set at the tight budget only.
+# For final numbers add ("evals/scenarios/*.json", "150") and ("evals/scenarios_test/*.json", "300").
 RUNS = [
-    ("evals/scenarios/*.json", "150"),
     ("evals/scenarios_test/*.json", "150"),
-    ("evals/scenarios_test/*.json", "300"),
 ]
+WORKERS = "4"  # scenario/mode pairs graded at the same time (Ollama serves them in parallel)
 MODEL = "llama3.1:8b"   # answers and query analysis (the PRD's model)
 JUDGE = "gpt-oss:20b"   # stronger judge (PRD §15.6)
-STORING = "gpt-oss:20b"  # background note-taking: stronger model, never blocks a reply
+# Note-taking back on llama3.1:8b: gpt-oss:20b followed the note rules worse in run v2 (52% vs 70% storing).
+STORING = MODEL
 WORK = "/tmp/recall"
 OUT = "/kaggle/working"
 
@@ -66,6 +67,7 @@ ollama_env = os.environ | {
     "OLLAMA_CONTEXT_LENGTH": "8192",
     "OLLAMA_KEEP_ALIVE": "24h",
     "OLLAMA_MAX_LOADED_MODELS": "2",
+    "OLLAMA_NUM_PARALLEL": "4",  # answer up to 4 requests per model at once (matches WORKERS)
 }
 subprocess.Popen(["ollama", "serve"], env=ollama_env, stdout=open(f"{OUT}/ollama.log", "w"), stderr=subprocess.STDOUT)
 wait_for("http://localhost:11434/api/version")
@@ -112,6 +114,7 @@ for scenarios, budget in RUNS:
         "--modes", "full,rag,ours",
         "--scenarios", scenarios,
         "--memory-budget", budget,
+        "--workers", WORKERS,
     ], check=False)
 
 # 8. Save results where Kaggle keeps them

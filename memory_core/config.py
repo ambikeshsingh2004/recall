@@ -59,7 +59,10 @@ class Settings(BaseSettings):
     profile_max_words: int = 150
     entity_fuzzy_sim: float = 0.6         # pg_trgm similarity for fuzzy entity names (never for codes)
     shared_entity_min_sim: float = 0.5    # a shared-entity reconcile candidate must also be this similar
-    match_min_score: float = 0.5          # reranker score for forget / correction matches
+    match_min_score: float = 0.5          # reranker score for forget matches (deleting is destructive)
+    correction_min_score: float = 0.3     # corrections only mark notes outdated, so match more loosely
+    rerank_fallback_k: int = 3            # if no note passes the cutoff, still send this many best ones
+    use_raw_backup: bool = True           # when notes look weak, also send the best raw past message
     summary_scrub_min_score: float = 0.1  # reranker pre-filter for summaries that may mention forgotten info
 
     # Ablation switches (PRD §15.7): turn one component off at a time.

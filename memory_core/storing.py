@@ -11,7 +11,7 @@ from uuid import UUID
 
 from langsmith import traceable
 
-from memory_core import embeddings, entities, llm, messages, reranker, threads
+from memory_core import embeddings, entities, llm, messages, rawturns, reranker, threads
 from memory_core.config import get_settings
 from memory_core.db import pool
 from memory_core.prompts import EXTRACT, RECONCILE
@@ -23,6 +23,19 @@ log = logging.getLogger(__name__)
 SECRET = re.compile(
     r"(password|passcode|\botp\b|\bpin\b|\bcvv\b|api[_ ]?key|secret key|\b(?:\d[ -]?){13,19}\b)", re.IGNORECASE
 )
+
+
+# The user's own name comes only from a self-introduction in their own message. The LLM used to report
+# names freely and once turned Nisha into "Kavya" (a friend she mentioned), so it is no longer trusted.
+# Lead-in is case-insensitive ("My name is"), but the name itself must be capitalised ("I'm lactose..." is not a name).
+_INTRO = re.compile(r"\b(?i:I'm|I am|my name is|call me)\s+([A-Z][a-zA-Z'-]+)")
+
+
+def introduced_name(new_messages: list[dict]) -> str | None:
+    for m in new_messages:
+        if m["role"] == "user" and (match := _INTRO.search(m["content"])):
+            return match.group(1)
+    return None
 
 
 @dataclass
@@ -40,12 +53,13 @@ def store_turn(user_id: str, thread_id: str, message_ids: list[int], now: dateti
     if not new:
         return {"saved": 0}
     earlier = messages.window(user_id, thread_id, 6, before_id=min(message_ids))
-    extracted = extract(
-        new, earlier, known_facts(user_id), entities.known_entities(user_id), threads.get_user_name(user_id), now
-    )
+    # Set the name once, before extraction, so even the first turn's notes use it. Never overwrite it.
+    user_name = threads.get_user_name(user_id)
+    if not user_name and (intro := introduced_name(new)):
+        threads.set_user_name(user_id, intro)
+        user_name = intro
+    extracted = extract(new, earlier, known_facts(user_id), entities.known_entities(user_id), user_name, now)
 
-    if extracted.user_name and extracted.user_name.strip():
-        threads.set_user_name(user_id, extracted.user_name)
     result = {
         "forgotten": sum(forget(user_id, what) for what in extracted.forget),
         "corrected": sum(correct(user_id, what, now) for what in extracted.corrections),
@@ -73,9 +87,12 @@ def store_notes(user_id: str, thread_id: str | None, message_ids: list[int], not
             skipped += 1
             continue
         plan = Plan(note, vec, occurred, ent_ids)
-        if note.type != "event" and note.confidence >= s.supersede_min_confidence:
+        if note.confidence >= s.supersede_min_confidence:
+            # Fix 3: a change is often written as an event ("release date changed to Dec 9"), so events may
+            # also replace the old *fact* they update. Before, only facts replaced facts and both stayed current.
+            pool_ = find_candidates(user_id, "fact", vec, ent_ids) if note.type == "event" else candidates
             plan.related = [
-                c for c in candidates
+                c for c in pool_
                 if c["sim"] >= s.related_sim or (c["shared"] and c["sim"] >= s.shared_entity_min_sim)
             ]
         plans.append(plan)
@@ -229,7 +246,7 @@ def write(
 # ---------- Corrections and forget (FR-S15) ----------
 
 @traceable(name="match_notes")
-def match_notes(user_id: str, description: str, include_old: bool) -> list[dict]:
+def match_notes(user_id: str, description: str, include_old: bool, min_score: float | None = None) -> list[dict]:
     """Notes that a forget/correction description refers to: vector top 10, confirmed by the reranker."""
     qvec = embeddings.embed_query(description)
     with pool().connection() as conn:
@@ -239,7 +256,7 @@ def match_notes(user_id: str, description: str, include_old: bool) -> list[dict]
             (user_id, include_old, qvec),
         ).fetchall()
     scores = reranker.score(description, [r["text"] for r in rows])
-    threshold = get_settings().match_min_score
+    threshold = get_settings().match_min_score if min_score is None else min_score
     return [r | {"score": round(sc, 3)} for r, sc in zip(rows, scores, strict=True) if sc >= threshold]
 
 
@@ -258,13 +275,14 @@ def forget(user_id: str, what: str) -> int:
     """Hard-delete every note (current or outdated) about `what`, and scrub it from thread summaries."""
     deleted = delete_notes(user_id, [n["id"] for n in match_notes(user_id, what, include_old=True)])
     threads.scrub_summaries(user_id, what)
+    rawturns.delete_matching(user_id, what, get_settings().match_min_score)  # the raw backup must not leak it
     return deleted
 
 
 @traceable(name="correct")
 def correct(user_id: str, what: str, now: datetime) -> int:
     """Invalidate current notes the user said were wrong (kept as history, not deleted)."""
-    ids = [n["id"] for n in match_notes(user_id, what, include_old=False)]
+    ids = [n["id"] for n in match_notes(user_id, what, include_old=False, min_score=get_settings().correction_min_score)]
     if not ids:
         return 0
     with pool().connection() as conn:

@@ -8,10 +8,13 @@ from memory_core.retrieval import (
     assign_to_best_group,
     date_range,
     format_groups,
+    is_weak,
     personalize,
     recency_factor,
     rrf_merge,
+    select_with_fallback,
 )
+from memory_core.storing import introduced_name
 from memory_core.schemas import SubQuery
 
 
@@ -67,6 +70,34 @@ def test_shared_note_goes_to_the_sub_query_it_scores_highest_for():
     groups = assign_to_best_group([[designer_weak, partner], [designer]])
     assert [n["id"] for n in groups[0]] == ["partner"]
     assert [n["id"] for n in groups[1]] == ["designer"]
+
+
+def test_personalize_maps_you_to_the_assistant():
+    assert personalize("What did you suggest for my bug?", "Sam") == "What did the assistant suggest for Sam's bug?"
+    assert personalize("Is that your advice?", "Sam") == "Is that the assistant's advice?"
+
+
+def test_cutoff_keeps_passing_notes_else_falls_back_to_best_few():
+    notes = [_note(i) | {"score": s, "final": s} for i, s in (("a", 0.9), ("b", 0.1), ("c", 0.05), ("d", 0.3))]
+    kept = select_with_fallback(notes, min_score=0.2, top_k=4, fallback_k=2)
+    assert [n["id"] for n in kept] == ["a", "d"]
+    assert not any(n.get("fallback") for n in kept)
+    low = [_note(i) | {"score": s, "final": s} for i, s in (("x", 0.1), ("y", 0.15), ("z", 0.01))]
+    fallback = select_with_fallback(low, min_score=0.2, top_k=4, fallback_k=2)
+    assert [n["id"] for n in fallback] == ["y", "x"]
+    assert all(n["fallback"] for n in fallback)
+    assert is_weak([fallback])
+    assert not is_weak([kept])
+    assert is_weak([[]])
+
+
+def test_user_name_only_from_self_introduction():
+    msg = lambda role, text: {"role": role, "content": text}  # noqa: E731
+    assert introduced_name([msg("user", "Hi, I'm Nisha, a PhD student.")]) == "Nisha"
+    assert introduced_name([msg("user", "My name is Leo.")]) == "Leo"
+    assert introduced_name([msg("user", "A friend in another lab, Kavya, is submitting too.")]) is None
+    assert introduced_name([msg("user", "I'm lactose intolerant.")]) is None
+    assert introduced_name([msg("assistant", "Hi, I'm your assistant Max.")]) is None
 
 
 def test_storing_model_setting_defaults_to_small_model():

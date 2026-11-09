@@ -33,14 +33,17 @@ _FIRST_PERSON = [
     (re.compile(r"\b(I'm|I am)\b", re.IGNORECASE), "{n} is"),
     (re.compile(r"\b(I've|I have)\b", re.IGNORECASE), "{n} has"),
     (re.compile(r"\b(I|me|myself)\b"), "{n}"),
+    # Second person means the assistant: "what did you suggest" -> "what did the assistant suggest".
+    (re.compile(r"\b(your|yours)\b", re.IGNORECASE), "the assistant's"),
+    (re.compile(r"\b(you|yourself)\b", re.IGNORECASE), "the assistant"),
 ]
 
 
 def personalize(query: str, user_name: str | None) -> str:
-    """Rewrite first-person words with the user's name for the cross-encoder.
+    """Rewrite I/my with the user's name and you/your with "the assistant" for the cross-encoder.
 
     The reranker scores "Where do I work" vs "Sam is a designer at Pixelcraft" at ~0.0,
-    but "Where do Sam work" at ~1.0: it cannot tell that "I" is the user.
+    but "Where do Sam work" at ~1.0: it cannot tell that "I" is the user, or that "you" is the assistant.
     """
     if not user_name:
         return query
@@ -143,16 +146,26 @@ def rerank(sq: SubQuery, candidates: list[dict], rng, now: datetime, user_name: 
     else:  # ablation: fall back to normalised RRF
         top = candidates[0]["rrf"]
         scores = [c["rrf"] / top for c in candidates]
-    kept = []
+    scored = []
     for c, sc in zip(candidates, scores, strict=True):
         if rng and rng[0] <= c["occurred_at"] < rng[1]:
             sc = max(sc, s.rerank_min_score)  # in the asked-about period: relevant to a time question
-        if sc < s.rerank_min_score:
-            continue
         final = sc * (1 + 0.5 * c["importance"]) * recency_factor(c["occurred_at"], now)
-        kept.append(c | {"score": round(sc, 3), "final": round(final, 3)})
-    kept.sort(key=lambda c: c["final"], reverse=True)
-    return kept[: s.top_k_per_subquery]
+        scored.append(c | {"score": round(sc, 3), "final": round(final, 3)})
+    return select_with_fallback(scored, s.rerank_min_score, s.top_k_per_subquery, s.rerank_fallback_k)
+
+
+def select_with_fallback(scored: list[dict], min_score: float, top_k: int, fallback_k: int) -> list[dict]:
+    """Keep notes above the cutoff; if none pass, keep the best few anyway, flagged as fallback.
+
+    An empty memory section made the answer model say "I don't know" even when the right note was
+    stored but scored low (Kaggle test run v2). The answer model already abstains well on its own.
+    """
+    passing = sorted((c for c in scored if c["score"] >= min_score), key=lambda c: c["final"], reverse=True)
+    if passing:
+        return passing[:top_k]
+    best = sorted(scored, key=lambda c: (c["score"], c["final"]), reverse=True)[:fallback_k]
+    return [c | {"fallback": True} for c in best]
 
 
 @traceable(name="search_subquery")
@@ -223,6 +236,12 @@ def current_instructions(user_id: str) -> list[dict]:
 def format_note(n: dict) -> str:
     status = f", OUTDATED since {fmt_date(n['valid_to'])}" if n.get("valid_to") else ""
     return f"- {fmt_date(n['occurred_at'])} ({n['type']}{status}) {n['text']}"
+
+
+def is_weak(groups: list[list[dict]]) -> bool:
+    """No notes, or only fallback notes that did not pass the reranker cutoff."""
+    notes = [n for g in groups for n in g]
+    return not notes or all(n.get("fallback") for n in notes)
 
 
 def format_groups(subqueries: list[SubQuery], groups: list[list[dict]]) -> str:
