@@ -117,7 +117,8 @@ def extract(
     )
     s = get_settings()
     result = llm.complete_json(
-        prompt, ExtractedNotes, small=True, max_tokens=s.extract_max_tokens, reasoning_effort=s.storing_reasoning_effort
+        prompt, ExtractedNotes, small=True, max_tokens=s.extract_max_tokens,
+        model=s.storing_model or None, reasoning_effort=s.storing_reasoning_effort,
     )
     return result or ExtractedNotes()
 
@@ -179,7 +180,7 @@ def reconcile(plans: list[Plan]) -> dict[int, list]:
         return {}
     result = llm.complete_json(
         RECONCILE.format(pairs="\n".join(lines)), ReconcileResult, small=True, max_tokens=2000,
-        reasoning_effort=get_settings().storing_reasoning_effort,
+        model=get_settings().storing_model or None, reasoning_effort=get_settings().storing_reasoning_effort,
     )
     out: dict[int, list] = {}
     for d in result.decisions if result else []:

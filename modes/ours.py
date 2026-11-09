@@ -35,7 +35,11 @@ class OursMode(MemoryMode):
         threads.rebuild_profile(user_id, now)
 
     def get_context(self, user_id: str, thread_id: str, question: str, now: datetime) -> Context:
-        """Fill the memory budget in priority order: instructions, profile, notes, summaries."""
+        """Fill the memory budget in priority order: instructions (capped), relevant notes, profile, summaries.
+
+        Notes that answer the question come before the profile: with a tight budget the profile used to take
+        all the space and leave no room for the answer (Kaggle test run, 2026-11-09).
+        """
         s = get_settings()
         budget, used = s.memory_token_budget, 0
         sections: dict[str, str] = {}
@@ -52,10 +56,17 @@ class OursMode(MemoryMode):
         user_name = threads.get_user_name(user_id)
         subqueries, analyzed = query.analyze(question, window, now, user_name)
 
+        # 1. Instructions: always on (PRD §8), but capped at a third of the budget so notes keep room.
         if instructions := retrieval.current_instructions(user_id):
-            add("instructions", "[How the user wants you to behave]\n" + "\n".join(f"- {i['text']}" for i in instructions))
-        if profile := threads.get_profile(user_id):
-            add("profile", f"[Profile]\n{profile}")
+            lines, cap = [], budget // 3
+            for i in instructions:
+                line = f"- {i['text']}"
+                if estimate_tokens("\n".join([*lines, line])) > cap:
+                    break
+                lines.append(line)
+            if lines:
+                add("instructions", "[How the user wants you to behave]\n" + "\n".join(lines))
+        # 2. Notes that answer the question get everything that is left.
         groups = retrieval.retrieve(
             user_id,
             subqueries,
@@ -65,6 +76,9 @@ class OursMode(MemoryMode):
             user_name=user_name,
         )
         add("notes", "[Relevant memories]\n" + retrieval.format_groups(subqueries, groups))
+        # 3. Background context only if space remains.
+        if profile := threads.get_profile(user_id):
+            add("profile", f"[Profile]\n{profile}")
         current = threads.get_summary(user_id, thread_id)
         if current and current["summary"]:
             add("current", f"[Earlier in this conversation]\n{current['summary']}")

@@ -69,6 +69,12 @@ def test_shared_note_goes_to_the_sub_query_it_scores_highest_for():
     assert [n["id"] for n in groups[1]] == ["designer"]
 
 
+def test_storing_model_setting_defaults_to_small_model():
+    from memory_core.config import Settings
+
+    assert Settings(_env_file=None).storing_model == ""
+
+
 def test_alias_normalisation_ignores_possessives():
     assert normalize_alias("My Cofounder") == "cofounder"
     assert normalize_alias("the dashboard project") == "dashboard project"

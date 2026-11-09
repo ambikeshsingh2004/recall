@@ -74,6 +74,9 @@ class Settings(BaseSettings):
     # Extraction and reconcile run in the background, so they can afford more reasoning than answers.
     # At "low", gpt-oss-20b ignored splitting/"who and what" rules even with explicit examples.
     storing_reasoning_effort: str = "medium"
+    # Model for background note-taking (extract, reconcile, summaries, profile). Empty = LLM_SMALL_MODEL.
+    # Storing never blocks a reply, so it can use a stronger model than answering.
+    storing_model: str = ""
 
     # Baseline modes (PRD §12)
     rag_top_k: int = 6

@@ -62,6 +62,7 @@ def update_summary(user_id: str, thread_id: str, now: datetime) -> None:
         [{"role": "user", "content": SUMMARY.format(summary=previous or "(empty)", messages=messages.as_transcript(new))}],
         small=True,
         max_tokens=1200,
+        model=get_settings().storing_model or None,
     ).strip()
     vec = embeddings.embed([text])[0]
     with pool().connection() as conn:
@@ -88,7 +89,10 @@ def scrub_summaries(user_id: str, what: str) -> int:
         if sc < threshold:
             continue
         text = llm.complete(
-            [{"role": "user", "content": SCRUB.format(what=what, summary=row["summary"])}], small=True, max_tokens=1200
+            [{"role": "user", "content": SCRUB.format(what=what, summary=row["summary"])}],
+            small=True,
+            max_tokens=1200,
+            model=get_settings().storing_model or None,
         ).strip()
         with pool().connection() as conn:
             conn.execute(
@@ -127,6 +131,7 @@ def rebuild_profile(user_id: str, now: datetime) -> None:
             max_words=s.profile_max_words, facts="\n".join(f"- {f['text']}" for f in facts))}],
         small=True,
         max_tokens=1000,
+        model=s.storing_model or None,
     ).strip()
     with pool().connection() as conn:
         conn.execute(

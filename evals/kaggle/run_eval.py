@@ -13,10 +13,15 @@ import time
 import urllib.request
 
 REPO = "https://github.com/ambikeshsingh2004/recall.git"
-SCENARIOS = "evals/scenarios_test/*.json"
-MEMORY_BUDGET = "150"
-MODEL = "llama3.1:8b"   # model under test (the PRD's model)
+# (scenario set, memory budget): dev set first to check fixes, then the held-out test set at two budgets.
+RUNS = [
+    ("evals/scenarios/*.json", "150"),
+    ("evals/scenarios_test/*.json", "150"),
+    ("evals/scenarios_test/*.json", "300"),
+]
+MODEL = "llama3.1:8b"   # answers and query analysis (the PRD's model)
 JUDGE = "gpt-oss:20b"   # stronger judge (PRD §15.6)
+STORING = "gpt-oss:20b"  # background note-taking: stronger model, never blocks a reply
 WORK = "/tmp/recall"
 OUT = "/kaggle/working"
 
@@ -85,6 +90,7 @@ os.environ.update({
     "LLM_JSON_MODE": "json_object",
     "LLM_TIMEOUT_S": "600",
     "JUDGE_MODEL": JUDGE,
+    "STORING_MODEL": STORING,
     "MODEL_CACHE_DIR": "/tmp/models",
     "LOG_DIR": f"{OUT}/logs",
     "LANGSMITH_TRACING": "false",
@@ -98,13 +104,15 @@ run([
     "print('LLM says:', llm.complete([{'role': 'user', 'content': 'Reply with OK'}], max_tokens=20))",
 ])
 
-# 7. The eval: same design as on the laptop (3 modes, test scenarios, memory budget)
-run([
-    sys.executable, "-m", "evals.run",
-    "--modes", "full,rag,ours",
-    "--scenarios", SCENARIOS,
-    "--memory-budget", MEMORY_BUDGET,
-], check=False)
+# 7. The evals: same design as on the laptop (3 modes, memory budget). Storing calls are cached in
+#    Postgres, so the second test-set run only pays for answers and judging.
+for scenarios, budget in RUNS:
+    run([
+        sys.executable, "-m", "evals.run",
+        "--modes", "full,rag,ours",
+        "--scenarios", scenarios,
+        "--memory-budget", budget,
+    ], check=False)
 
 # 8. Save results where Kaggle keeps them
 shutil.copytree(f"{WORK}/evals/results", f"{OUT}/results", dirs_exist_ok=True)
