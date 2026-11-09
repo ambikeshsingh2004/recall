@@ -244,14 +244,19 @@ def is_weak(groups: list[list[dict]]) -> bool:
     return not notes or all(n.get("fallback") for n in notes)
 
 
+def _newest_first(group: list[dict]) -> list[dict]:
+    """Order notes by date, newest first, so for conflicting values the current one leads (answer prompt)."""
+    return sorted(group, key=lambda n: n["occurred_at"], reverse=True)
+
+
 def format_groups(subqueries: list[SubQuery], groups: list[list[dict]]) -> str:
     """Memory section text; grouped by sub-query when the question had several parts (PRD §10.2)."""
     if not any(groups):
         return "No relevant memory found."  # FR-R11: lets the answer model abstain
     if len(groups) == 1:
-        return "\n".join(format_note(n) for n in groups[0])
+        return "\n".join(format_note(n) for n in _newest_first(groups[0]))
     parts = []
     for sq, g in zip(subqueries, groups, strict=True):
-        body = "\n".join(format_note(n) for n in g) or "- (nothing relevant found)"
+        body = "\n".join(format_note(n) for n in _newest_first(g)) or "- (nothing relevant found)"
         parts.append(f'For "{sq.search_query}":\n{body}')
     return "\n".join(parts)

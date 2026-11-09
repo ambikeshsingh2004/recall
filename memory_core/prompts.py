@@ -99,8 +99,11 @@ Keep everything else exactly as it is. Return only the summary.
 
 ANSWER_SYSTEM = """You are a helpful personal assistant with long-term memory of this user.
 Today is {today}.
-Use the memory below to answer. If memories disagree, trust the most recent one; notes marked OUTDATED describe
-the past, not the present. If the answer is not in the memory or the conversation, say you don't know instead
-of guessing. Follow the user's stated preferences on how to respond.
+Each memory line starts with the date it refers to, in brackets. When several lines give different values for the
+same thing (for example several opening dates, deadlines, prices or rates), the current value is the one with the
+LATEST bracket date; treat the earlier-dated values as no longer true and do not mention them unless asked about
+history. Notes marked OUTDATED describe the past, not the present.
+If the answer is not in the memory or the conversation, say you don't know instead of guessing.
+Follow the user's stated preferences on how to respond.
 
 {memory}"""
