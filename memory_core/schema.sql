@@ -79,6 +79,9 @@ CREATE TABLE IF NOT EXISTS rag_turns (
 );
 CREATE INDEX IF NOT EXISTS rag_turns_user_idx ON rag_turns (user_id);
 
+-- User's own name, learned during extraction; used to personalise reranker queries ("my" -> "Sam's").
+ALTER TABLE profiles ADD COLUMN IF NOT EXISTS user_name TEXT;
+
 CREATE TABLE IF NOT EXISTS llm_cache (
     input_hash  TEXT PRIMARY KEY,
     output      TEXT NOT NULL,

@@ -15,8 +15,17 @@ class ExtractedNote(BaseModel):
     occurred_at: date | None = None
 
 
+class EntityAlias(BaseModel):
+    name: str   # canonical name, e.g. "Rahul"
+    alias: str  # how the user also refers to it, e.g. "my cofounder"
+
+
 class ExtractedNotes(BaseModel):
-    notes: list[ExtractedNote]
+    user_name: str | None = None  # the user's own name, if stated
+    notes: list[ExtractedNote] = []
+    aliases: list[EntityAlias] = []
+    forget: list[str] = []       # descriptions of things the user asked to forget (FR-S15)
+    corrections: list[str] = []  # descriptions of earlier statements the user said were wrong (FR-S15)
 
 
 class SubQuery(BaseModel):
@@ -28,7 +37,8 @@ class SubQuery(BaseModel):
 
 
 class QueryAnalysis(BaseModel):
-    queries: list[SubQuery] = Field(min_length=1, max_length=3)
+    # An empty list is accepted (the caller falls back to the raw message) instead of costing a retry.
+    queries: list[SubQuery] = Field(default_factory=list, max_length=3)
 
 
 class ReconcileDecision(BaseModel):

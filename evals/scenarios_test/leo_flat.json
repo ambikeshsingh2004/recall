@@ -1,0 +1,60 @@
+{
+  "scenario": "leo_flat",
+  "user_id": "leo",
+  "threads": [
+    {"thread_id": "A", "messages": [
+      {"at": "2026-09-01 20:00", "role": "user", "content": "Hi, I'm Leo, a backend developer at Finch Labs, working fully remote. My wife Tara and I are looking to buy a 3BHK in Bengaluru, ideally in Hebbal or Yelahanka because Tara's office is in Manyata Tech Park. Our budget is 1.2 crore all-in. We have a golden retriever named Biscuit, so the society must allow pets. Please always state amounts in lakh and crore, never in millions, I find that much easier to follow. Also, my sister Ana is buying a 2BHK in Whitefield for about 95 lakh, so we've been comparing notes."},
+      {"at": "2026-09-01 20:00", "role": "assistant", "content": "Nice to meet you, Leo! Hebbal and Yelahanka both work well for Manyata Tech Park. Before shortlisting, always check each project's occupancy certificate (OC) and RERA registration, and get the pet policy in writing."}
+    ]},
+    {"thread_id": "B", "messages": [
+      {"at": "2026-09-14 19:00", "role": "user", "content": "We shortlisted two flats in Prestige Meadows, Yelahanka: B-1203 for 1.18 crore with an east-facing balcony, and B-1302 for 1.24 crore with a bigger kitchen. Our bank's home loan offer is 8.9 percent for 20 years. The society allows pets but charges a one-time pet registration fee of 5,000 rupees."},
+      {"at": "2026-09-14 19:00", "role": "assistant", "content": "B-1203 fits your 1.2 crore budget; B-1302 is slightly over. At 8.9 percent, a 90 lakh loan over 20 years works out to roughly 80,400 rupees a month."}
+    ]},
+    {"thread_id": "C", "messages": [
+      {"at": "2026-09-28 21:00", "role": "user", "content": "Good news, the bank revised our loan rate to 8.6 percent after we added Tara's salary slip. We're leaning towards B-1203. My PAN is ABCPL4521K, in case you need it for loan paperwork. We also increased the budget to 1.3 crore to cover registration and interiors."},
+      {"at": "2026-09-28 21:00", "role": "assistant", "content": "8.6 percent is a good improvement. With a 1.3 crore budget, B-1203 leaves about 12 lakh for registration and interiors."}
+    ]},
+    {"thread_id": "D", "messages": [
+      {"at": "2026-10-12 18:00", "role": "user", "content": "Please forget my PAN, I shouldn't have shared it. Also a correction: Biscuit is a beagle, not a golden retriever, I don't know why I said that. And Ana finalised her Whitefield flat at 98 lakh."},
+      {"at": "2026-10-12 18:00", "role": "assistant", "content": "Done, I've forgotten your PAN. Noted: Biscuit is a beagle. Congratulations to Ana on her Whitefield flat at 98 lakh."}
+    ]},
+    {"thread_id": "E", "messages": [
+      {"at": "2026-10-21 20:00", "role": "user", "content": "The bank dropped our rate again, to 8.4 percent, because of a festive offer. We plan to move in on February 1 if the registration happens in January. Tara wants a modular kitchen; the interior quote is 9.5 lakh."},
+      {"at": "2026-10-21 20:00", "role": "assistant", "content": "8.4 percent is a great rate. A February 1 move-in after January registration is realistic, and the 9.5 lakh interior quote fits your budget."}
+    ]},
+    {"thread_id": "F", "messages": [
+      {"at": "2026-10-29 19:00", "role": "user", "content": "Big step: we paid the token amount of 2 lakh for B-1203 on Monday, and the builder confirmed the agreement signing for November 20."},
+      {"at": "2026-10-29 19:00", "role": "assistant", "content": "Congratulations! The token for B-1203 is paid and the agreement signing on November 20 is confirmed."}
+    ]}
+  ],
+  "expected_memories": {
+    "current": ["home loan rate 8.4 percent", "Biscuit is a beagle", "budget 1.3 crore", "token of 2 lakh paid for B-1203", "agreement signing November 20", "Leo wants amounts in lakh and crore"],
+    "old": ["loan rate 8.9 percent", "loan rate 8.6 percent", "Biscuit is a golden retriever", "budget 1.2 crore"]
+  },
+  "questions": [
+    {"asked_at": "2026-11-04 10:00", "question": "What interest rate is our home loan at now?", "category": "knowledge_update",
+     "expected_answer": "8.4 percent", "must_include": ["8.4"], "must_not_include": [],
+     "expected_evidence": ["bank dropped the rate to 8.4 percent"]},
+    {"asked_at": "2026-11-04 10:00", "question": "What breed is my dog?", "category": "correction",
+     "expected_answer": "A beagle (not a golden retriever)", "must_include": ["beagle"], "must_not_include": [],
+     "expected_evidence": ["Biscuit is a beagle"]},
+    {"asked_at": "2026-11-04 10:00", "question": "What's my PAN number?", "category": "forget",
+     "expected_answer": "Does not reveal it: Leo asked for it to be forgotten", "must_include": [], "must_not_include": ["ABCPL4521K"],
+     "expected_evidence": []},
+    {"asked_at": "2026-11-04 10:00", "question": "Which flat did we pay the token for, and what was the price of the other flat we considered?", "category": "multi_part",
+     "expected_answer": "B-1203; the other flat, B-1302, was 1.24 crore", "must_include": ["1203", "1.24"], "must_not_include": [],
+     "expected_evidence": ["paid token for B-1203", "B-1302 was 1.24 crore"]},
+    {"asked_at": "2026-11-04 10:00", "question": "What did you say we should check before buying?", "category": "assistant_recall",
+     "expected_answer": "The occupancy certificate (OC), the RERA registration, and the pet policy in writing", "must_include": ["RERA"], "must_not_include": [],
+     "expected_evidence": ["assistant advised checking OC, RERA registration and pet policy in writing"]},
+    {"asked_at": "2026-11-04 10:00", "question": "What did we do about the flat last week?", "category": "temporal",
+     "expected_answer": "Last week (Oct 26 - Nov 1) they paid a 2 lakh token for B-1203 on Oct 26 and the builder confirmed agreement signing for November 20", "must_include": ["1203"], "must_not_include": [],
+     "expected_evidence": ["token of 2 lakh paid for B-1203 on Oct 26", "agreement signing November 20"]},
+    {"asked_at": "2026-11-04 10:00", "question": "How much are the interiors going to cost us?", "category": "instruction_following",
+     "expected_answer": "9.5 lakh, stated in lakh (not as 0.95 million), as Leo asked", "must_include": ["9.5"], "must_not_include": ["million"],
+     "expected_evidence": ["interior quote is 9.5 lakh", "Leo wants amounts in lakh and crore"]},
+    {"asked_at": "2026-11-04 10:00", "question": "What was our budget when we started looking?", "category": "history",
+     "expected_answer": "1.2 crore all-in (later raised to 1.3 crore)", "must_include": ["1.2"], "must_not_include": [],
+     "expected_evidence": ["initial budget was 1.2 crore"]}
+  ]
+}

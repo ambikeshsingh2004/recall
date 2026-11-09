@@ -35,10 +35,15 @@ class RagMode(MemoryMode):
         budget = get_settings().memory_token_budget  # same memory budget as ours (FR-M3)
         kept, used = [], 0
         for r in rows:
-            if used + estimate_tokens(r["text"]) > budget:
+            cost = estimate_tokens(r["text"])
+            if used + cost > budget:
+                remaining = budget - used
+                if remaining >= 30:  # fill the rest of the budget with the start of this turn
+                    kept.append(r["text"][: remaining * 4].rstrip() + " ...")
+                    used = budget
                 break
             kept.append(r["text"])
-            used += estimate_tokens(r["text"])
+            used += cost
         memory = "[Possibly relevant past conversation turns]\n" + "\n\n".join(kept) if kept else ""
         return Context(
             memory=memory,

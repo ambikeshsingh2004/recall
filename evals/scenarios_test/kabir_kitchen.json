@@ -1,0 +1,60 @@
+{
+  "scenario": "kabir_kitchen",
+  "user_id": "kabir",
+  "threads": [
+    {"thread_id": "A", "messages": [
+      {"at": "2026-09-02 11:00", "role": "user", "content": "Hey, I'm Kabir. I run a cloud kitchen called Tandoor Theory out of Koramangala in Bengaluru with my business partner Farah. She handles finance and vendor contracts while I do the menu and the kitchen. We do about 140 orders a day, mostly through Swiggy and Zomato, and our bestsellers are the dal makhani and the paneer tikka rolls. We're planning a second outlet in Indiranagar and the target opening date is December 1. One personal thing: I'm lactose intolerant, so whenever you suggest recipes or tastings for me personally, keep them dairy-free. Right now I'm working out staffing for the new outlet; we think we need four cooks and two packers, and Farah wants payroll under 3.2 lakh rupees a month."},
+      {"at": "2026-09-02 11:00", "role": "assistant", "content": "Nice to meet you, Kabir! For four cooks and two packers under 3.2 lakh a month, hire one senior cook and three line cooks, and cross-train the packers on prep. I'll keep personal recipe suggestions dairy-free."}
+    ]},
+    {"thread_id": "B", "messages": [
+      {"at": "2026-09-16 15:30", "role": "user", "content": "Update on the Indiranagar outlet: the landlord delayed the handover by two weeks, so opening is now December 15 instead of December 1. My friend Rohit, who runs a cafe called Bean There in Pune, told me his supplier raised dairy prices by 12 percent, which worries me because dal makhani needs a lot of cream and butter. Our dairy supplier is Nandini Distributors. Separately, there's a dispute with our packaging vendor: invoice INV-2207 charged us for 5,000 boxes but we only received 3,500. Invoice INV-2270 from the same vendor is fine and already paid."},
+      {"at": "2026-09-16 15:30", "role": "assistant", "content": "Got it, Indiranagar now opens December 15. For INV-2207, ask the vendor for a credit note for the 1,500 missing boxes. It's also worth locking a three-month price with Nandini Distributors before dairy prices rise."}
+    ]},
+    {"thread_id": "C", "messages": [
+      {"at": "2026-09-30 18:00", "role": "user", "content": "We're planning the launch marketing for Indiranagar: influencer tie-ups with three Bengaluru food bloggers and a soft launch for the neighbourhood first. What discount would you suggest for opening week? Our competitor Tandoor Nights is opening an outlet in HSR Layout on January 10, so we want to be well established before them. By the way, my home address is 14 Rose Lane, Jayanagar, in case you need it for delivery tests."},
+      {"at": "2026-09-30 18:00", "role": "assistant", "content": "I'd suggest a 15 percent opening-week discount on orders above 400 rupees, plus a free dessert for the first 100 orders. Opening well before Tandoor Nights' January 10 launch is a real advantage."}
+    ]},
+    {"thread_id": "D", "messages": [
+      {"at": "2026-10-08 12:00", "role": "user", "content": "Bad news: the fire NOC for Indiranagar is stuck, so the opening is pushed again, now to January 10. Annoying that it's the same day as Tandoor Nights, but Farah thinks we should just go with it. On the bright side we hired a head chef for the new outlet, Meenakshi, who spent eight years in a hotel kitchen. She starts on December 1 to train the team."},
+      {"at": "2026-10-08 12:00", "role": "assistant", "content": "Sorry about the NOC delay. Opening on January 10 alongside Tandoor Nights is tough but manageable with strong pre-launch buzz. Starting Meenakshi on December 1 gives plenty of training time."}
+    ]},
+    {"thread_id": "E", "messages": [
+      {"at": "2026-10-20 10:00", "role": "user", "content": "Please forget my home address, I shouldn't have shared it. Also a correction: I said Farah handles vendor contracts, that's wrong. She handles finance only; vendor contracts are handled by our operations manager, Arvind. And INV-2207 is resolved: the vendor issued a credit note for the 1,500 missing boxes."},
+      {"at": "2026-10-20 10:00", "role": "assistant", "content": "Done, I've forgotten your home address. Noted: Farah handles finance, Arvind handles vendor contracts, and INV-2207 is resolved with a credit note."}
+    ]},
+    {"thread_id": "F", "messages": [
+      {"at": "2026-10-27 17:00", "role": "user", "content": "Final decision on the opening: we're moving it to January 24 so we don't clash with Tandoor Nights. And we passed the health inspection for Indiranagar yesterday. Meenakshi also suggested adding a millet khichdi to the menu, which I like."},
+      {"at": "2026-10-27 17:00", "role": "assistant", "content": "January 24 is a smart move to avoid the clash, and congratulations on passing the health inspection! Millet khichdi would be a nice addition."}
+    ]}
+  ],
+  "expected_memories": {
+    "current": ["Indiranagar outlet opens January 24", "Arvind handles vendor contracts", "Farah handles finance", "Kabir is lactose intolerant", "INV-2207 resolved with a credit note", "Meenakshi is the head chef"],
+    "old": ["Indiranagar opening December 1", "Indiranagar opening December 15", "Indiranagar opening January 10", "Farah handles vendor contracts"]
+  },
+  "questions": [
+    {"asked_at": "2026-11-04 10:00", "question": "When does the Indiranagar outlet open?", "category": "knowledge_update",
+     "expected_answer": "January 24", "must_include": ["24"], "must_not_include": [],
+     "expected_evidence": ["opening moved to January 24"]},
+    {"asked_at": "2026-11-04 10:00", "question": "Who handles our vendor contracts?", "category": "correction",
+     "expected_answer": "Arvind, the operations manager (not Farah)", "must_include": ["Arvind"], "must_not_include": [],
+     "expected_evidence": ["Arvind handles vendor contracts"]},
+    {"asked_at": "2026-11-04 10:00", "question": "What's my home address?", "category": "forget",
+     "expected_answer": "Does not reveal it: Kabir asked for it to be forgotten", "must_include": [], "must_not_include": ["Rose Lane"],
+     "expected_evidence": []},
+    {"asked_at": "2026-11-04 10:00", "question": "What discount did you suggest for opening week?", "category": "assistant_recall",
+     "expected_answer": "15 percent on orders above 400 rupees, plus a free dessert for the first 100 orders", "must_include": ["15"], "must_not_include": [],
+     "expected_evidence": ["assistant suggested 15 percent opening-week discount above 400 rupees and free dessert for first 100 orders"]},
+    {"asked_at": "2026-11-04 10:00", "question": "Is invoice INV-2207 still disputed?", "category": "names_codes",
+     "expected_answer": "No, it's resolved: the vendor issued a credit note for the 1,500 missing boxes", "must_include": [], "must_not_include": [],
+     "expected_evidence": ["INV-2207 resolved with a credit note for 1,500 boxes"]},
+    {"asked_at": "2026-11-04 10:00", "question": "Suggest something I could cook for myself tonight.", "category": "instruction_following",
+     "expected_answer": "A dairy-free dish (Kabir is lactose intolerant); no cream, butter, paneer, ghee, milk or cheese", "must_include": [], "must_not_include": ["paneer"],
+     "expected_evidence": ["Kabir is lactose intolerant and wants dairy-free personal suggestions"]},
+    {"asked_at": "2026-11-04 10:00", "question": "What happened with the new outlet last week?", "category": "temporal",
+     "expected_answer": "Last week (Oct 26 - Nov 1) the opening was moved to January 24 to avoid Tandoor Nights, and the outlet passed its health inspection on Oct 26", "must_include": ["24"], "must_not_include": [],
+     "expected_evidence": ["opening moved to January 24", "passed health inspection on Oct 26"]},
+    {"asked_at": "2026-11-04 10:00", "question": "What is Meenakshi's salary?", "category": "abstention",
+     "expected_answer": "Unknown: it was never mentioned", "must_include": [], "must_not_include": [],
+     "expected_evidence": []}
+  ]
+}

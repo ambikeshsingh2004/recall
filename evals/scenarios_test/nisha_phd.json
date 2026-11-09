@@ -1,0 +1,60 @@
+{
+  "scenario": "nisha_phd",
+  "user_id": "nisha",
+  "threads": [
+    {"thread_id": "A", "messages": [
+      {"at": "2026-08-20 21:00", "role": "user", "content": "Hi, I'm Nisha, a third-year PhD student at IISc Bangalore working on early sepsis prediction from ICU vitals. My advisor is Prof. Iyer and I work closely with my labmate Dev, who handles our data pipeline. We have two datasets: COHORT-A, about 12,000 ICU stays from a Bangalore hospital, and COHORT-B, about 4,000 stays from a Chennai hospital. My thesis submission deadline is March 31 next year. Whenever you explain anything mathematical, please write the equations in LaTeX, it helps me paste them into my notes. Right now I'm comparing gradient boosting with a temporal convolutional network; the TCN looks promising but overfits on COHORT-B."},
+      {"at": "2026-08-20 21:00", "role": "assistant", "content": "Nice to meet you, Nisha! For a fair comparison on imbalanced sepsis labels, I recommend stratified 5-fold cross-validation grouped by patient, so no patient appears in both train and test folds. I'll write equations in LaTeX."}
+    ]},
+    {"thread_id": "B", "messages": [
+      {"at": "2026-09-05 19:00", "role": "user", "content": "We're targeting NeurIPS for the paper with the TCN results. Dev finished the pipeline refactor, and our best run so far is exp-114, trained on COHORT-B, with an AUROC of 0.87. The attention variant, exp-141, only reached 0.81. Prof. Iyer wants a calibration analysis before we submit. A friend in another lab, Kavya, is also submitting a sepsis paper to NeurIPS, so the space is getting crowded."},
+      {"at": "2026-09-05 19:00", "role": "assistant", "content": "exp-114 at 0.87 AUROC is a strong result. For calibration, report the Brier score and a reliability diagram alongside AUROC."}
+    ]},
+    {"thread_id": "C", "messages": [
+      {"at": "2026-09-20 22:00", "role": "user", "content": "Change of plan: we missed the NeurIPS window, so we're targeting ICML instead, with a deadline in late January. Prof. Iyer also said my thesis deadline can move to April 30, because the department extended it for everyone this year. Dev is at a conference in Singapore from October 5 to October 9, so data work pauses that week."},
+      {"at": "2026-09-20 22:00", "role": "assistant", "content": "ICML gives you more time for the calibration analysis. Thesis deadline April 30 noted, and data work pauses October 5 to 9."}
+    ]},
+    {"thread_id": "D", "messages": [
+      {"at": "2026-10-06 20:00", "role": "user", "content": "Correction to something I told you: exp-114 was trained on COHORT-A, not COHORT-B, I mixed them up. Also, my thesis committee meeting is set for November 12 at 3 pm."},
+      {"at": "2026-10-06 20:00", "role": "assistant", "content": "Thanks, noted: exp-114 used COHORT-A. Committee meeting on November 12 at 3 pm."}
+    ]},
+    {"thread_id": "E", "messages": [
+      {"at": "2026-10-22 18:00", "role": "user", "content": "Another update: the thesis submission deadline moved again, it's now May 15, because my committee wants an extra chapter on external validation. We submitted a workshop version of the paper to the ML4H workshop yesterday. Dev suggested we test on a third dataset, MIMIC-IV, for the external validation."},
+      {"at": "2026-10-22 18:00", "role": "assistant", "content": "Thesis deadline May 15 noted, and congratulations on the ML4H submission! MIMIC-IV is a good choice for external validation."}
+    ]},
+    {"thread_id": "F", "messages": [
+      {"at": "2026-10-30 21:00", "role": "user", "content": "This week Prof. Iyer approved the external validation plan, and we got our MIMIC-IV access credentials on Tuesday. I'm a bit stressed about the timeline though."},
+      {"at": "2026-10-30 21:00", "role": "assistant", "content": "Great progress! Break the external-validation chapter into weekly milestones between now and May 15 so the timeline stays manageable."}
+    ]}
+  ],
+  "expected_memories": {
+    "current": ["thesis deadline May 15", "exp-114 trained on COHORT-A", "targeting ICML", "Dev is Nisha's labmate handling the data pipeline", "committee meeting November 12 at 3 pm"],
+    "old": ["thesis deadline March 31", "thesis deadline April 30", "exp-114 trained on COHORT-B", "targeting NeurIPS"]
+  },
+  "questions": [
+    {"asked_at": "2026-11-04 10:00", "question": "When is my thesis due?", "category": "knowledge_update",
+     "expected_answer": "May 15", "must_include": ["15"], "must_not_include": [],
+     "expected_evidence": ["thesis deadline moved to May 15"]},
+    {"asked_at": "2026-11-04 10:00", "question": "Which dataset was exp-114 trained on?", "category": "correction",
+     "expected_answer": "COHORT-A (not COHORT-B)", "must_include": ["COHORT-A"], "must_not_include": [],
+     "expected_evidence": ["exp-114 was trained on COHORT-A"]},
+    {"asked_at": "2026-11-04 10:00", "question": "What AUROC did exp-141 get?", "category": "names_codes",
+     "expected_answer": "0.81 (the attention variant)", "must_include": ["0.81"], "must_not_include": [],
+     "expected_evidence": ["exp-141 reached 0.81 AUROC"]},
+    {"asked_at": "2026-11-04 10:00", "question": "Which conference were we aiming for before ICML?", "category": "history",
+     "expected_answer": "NeurIPS", "must_include": ["NeurIPS"], "must_not_include": [],
+     "expected_evidence": ["targeted NeurIPS before switching to ICML"]},
+    {"asked_at": "2026-11-04 10:00", "question": "What evaluation method did you recommend for comparing my models?", "category": "assistant_recall",
+     "expected_answer": "Stratified 5-fold cross-validation grouped by patient", "must_include": ["5"], "must_not_include": [],
+     "expected_evidence": ["assistant recommended stratified 5-fold cross-validation grouped by patient"]},
+    {"asked_at": "2026-11-04 10:00", "question": "Explain how the Brier score is calculated.", "category": "instruction_following",
+     "expected_answer": "An explanation whose equations are written in LaTeX (e.g. $\\frac{1}{N}\\sum (p_i - y_i)^2$), as Nisha asked", "must_include": [], "must_not_include": [],
+     "expected_evidence": ["Nisha wants equations written in LaTeX"]},
+    {"asked_at": "2026-11-04 10:00", "question": "What happened with my research last week?", "category": "temporal",
+     "expected_answer": "Last week (Oct 26 - Nov 1) Prof. Iyer approved the external validation plan and the MIMIC-IV access credentials arrived on Oct 27", "must_include": ["MIMIC"], "must_not_include": [],
+     "expected_evidence": ["Prof. Iyer approved external validation plan", "MIMIC-IV access credentials received Oct 27"]},
+    {"asked_at": "2026-11-04 10:00", "question": "When is my committee meeting, and what does my labmate handle?", "category": "multi_part",
+     "expected_answer": "November 12 at 3 pm; Dev handles the data pipeline", "must_include": ["12", "pipeline"], "must_not_include": [],
+     "expected_evidence": ["committee meeting November 12 at 3 pm", "Dev handles the data pipeline"]}
+  ]
+}

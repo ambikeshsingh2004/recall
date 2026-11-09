@@ -1,0 +1,60 @@
+{
+  "scenario": "zoya_atlas",
+  "user_id": "zoya",
+  "threads": [
+    {"thread_id": "A", "messages": [
+      {"at": "2026-09-03 09:30", "role": "user", "content": "Hi, I'm Zoya, engineering manager for the Atlas team at Corvid Systems in Hyderabad. My team is Omar on backend, Priyanka on frontend and Wei on QA. My skip-level is Rhea, our director of engineering. We're shipping Atlas v3, which adds multi-region support, and the release date is November 18. One preference: keep your answers to at most five bullet points, I read them between meetings. Our biggest risk right now is the database migration, tracked as ticket ATL-882."},
+      {"at": "2026-09-03 09:30", "role": "assistant", "content": "Hi Zoya! For ATL-882, rehearse the migration on a staging copy and prepare a rollback script well before the November 18 release."}
+    ]},
+    {"thread_id": "B", "messages": [
+      {"at": "2026-09-17 08:45", "role": "user", "content": "We had a production incident last night, SEV-417: a cache stampede took the API down for 22 minutes. A different incident last month, SEV-471, was a certificate expiry and is unrelated. Rhea wants a postmortem by Friday. Also, confidentially, I'm interviewing with another company, Lumen AI, next week."},
+      {"at": "2026-09-17 08:45", "role": "assistant", "content": "For SEV-417, write a blameless postmortem with a timeline, a 5-whys root cause analysis and action items with owners. Request coalescing would prevent future cache stampedes."}
+    ]},
+    {"thread_id": "C", "messages": [
+      {"at": "2026-10-01 10:00", "role": "user", "content": "Atlas v3 slipped: the multi-region failover tests failed, so the release moved to December 2. Rhea is okay with it as long as we don't slip again. And a correction to what I told you: Wei is not on QA, Wei moved to the platform team. QA is now handled by Joel."},
+      {"at": "2026-10-01 10:00", "role": "assistant", "content": "Noted: Atlas v3 now ships December 2, Wei is on the platform team and Joel handles QA."}
+    ]},
+    {"thread_id": "D", "messages": [
+      {"at": "2026-10-14 09:00", "role": "user", "content": "Please forget that I was interviewing at Lumen AI, I withdrew and don't want it on record. Good news: ATL-882 is done, the migration ran cleanly in staging and production. We're also planning a team offsite in Goa in January."},
+      {"at": "2026-10-14 09:00", "role": "assistant", "content": "Done, I've forgotten that. Great news on ATL-882, and a January offsite in Goa sounds fun."}
+    ]},
+    {"thread_id": "E", "messages": [
+      {"at": "2026-10-23 11:00", "role": "user", "content": "The release moved once more, to December 9, because the security review found two medium issues in the new auth flow. Priyanka is leading the fix. Omar starts paternity leave on November 2 for four weeks, so Joel and Wei will cover backend code reviews."},
+      {"at": "2026-10-23 11:00", "role": "assistant", "content": "December 9 noted. With Omar out from November 2, pairing Joel and Wei on backend reviews makes sense."}
+    ]},
+    {"thread_id": "F", "messages": [
+      {"at": "2026-10-28 18:00", "role": "user", "content": "This week went well: the auth fixes passed security re-review yesterday, and Rhea approved December 9 as the final release date."},
+      {"at": "2026-10-28 18:00", "role": "assistant", "content": "Great news: the fixes passed re-review and December 9 is now final."}
+    ]}
+  ],
+  "expected_memories": {
+    "current": ["Atlas v3 release December 9", "Joel handles QA", "Wei is on the platform team", "Rhea is director of engineering", "Zoya wants at most five bullet points", "ATL-882 done"],
+    "old": ["release November 18", "release December 2", "Wei on QA"]
+  },
+  "questions": [
+    {"asked_at": "2026-11-04 10:00", "question": "When is Atlas v3 shipping?", "category": "knowledge_update",
+     "expected_answer": "December 9", "must_include": ["9"], "must_not_include": [],
+     "expected_evidence": ["release moved to December 9, approved as final"]},
+    {"asked_at": "2026-11-04 10:00", "question": "Who handles QA on my team?", "category": "correction",
+     "expected_answer": "Joel (Wei moved to the platform team)", "must_include": ["Joel"], "must_not_include": [],
+     "expected_evidence": ["QA is handled by Joel"]},
+    {"asked_at": "2026-11-04 10:00", "question": "Am I interviewing at any other companies?", "category": "forget",
+     "expected_answer": "Does not mention Lumen AI or the interview: Zoya asked for it to be forgotten", "must_include": [], "must_not_include": ["Lumen"],
+     "expected_evidence": []},
+    {"asked_at": "2026-11-04 10:00", "question": "What caused SEV-417?", "category": "names_codes",
+     "expected_answer": "A cache stampede that took the API down for 22 minutes (not the certificate expiry, which was SEV-471)", "must_include": ["cache"], "must_not_include": [],
+     "expected_evidence": ["SEV-417 was a cache stampede, API down 22 minutes"]},
+    {"asked_at": "2026-11-04 10:00", "question": "What did you suggest for the SEV-417 postmortem?", "category": "assistant_recall",
+     "expected_answer": "A blameless postmortem with a timeline, 5-whys root cause analysis and action items with owners; request coalescing to prevent stampedes", "must_include": [], "must_not_include": [],
+     "expected_evidence": ["assistant suggested blameless postmortem, timeline, 5 whys, action items with owners, request coalescing"]},
+    {"asked_at": "2026-11-04 10:00", "question": "Give me tips for running our team offsite.", "category": "instruction_following",
+     "expected_answer": "Tips in at most five bullet points, as Zoya asked", "must_include": [], "must_not_include": [],
+     "expected_evidence": ["Zoya wants answers in at most five bullet points"]},
+    {"asked_at": "2026-11-04 10:00", "question": "What happened with the release last week?", "category": "temporal",
+     "expected_answer": "Last week (Oct 26 - Nov 1) the auth fixes passed security re-review on Oct 27 and Rhea approved December 9 as the final release date", "must_include": [], "must_not_include": [],
+     "expected_evidence": ["auth fixes passed re-review on Oct 27", "Rhea approved December 9 as final"]},
+    {"asked_at": "2026-11-04 10:00", "question": "What is our team's sprint velocity?", "category": "abstention",
+     "expected_answer": "Unknown: it was never mentioned", "must_include": [], "must_not_include": [],
+     "expected_evidence": []}
+  ]
+}

@@ -4,16 +4,31 @@ from datetime import datetime
 
 from langsmith import traceable
 
-from memory_core import embeddings, llm, messages
+from memory_core import embeddings, llm, messages, reranker
 from memory_core.config import get_settings
 from memory_core.db import pool
-from memory_core.prompts import PROFILE, SUMMARY
+from memory_core.prompts import PROFILE, SCRUB, SUMMARY
 
 
 def get_profile(user_id: str) -> str:
     with pool().connection() as conn:
         row = conn.execute("SELECT profile FROM profiles WHERE user_id = %s", (user_id,)).fetchone()
     return row["profile"] if row else ""
+
+
+def get_user_name(user_id: str) -> str | None:
+    with pool().connection() as conn:
+        row = conn.execute("SELECT user_name FROM profiles WHERE user_id = %s", (user_id,)).fetchone()
+    return row["user_name"] if row else None
+
+
+def set_user_name(user_id: str, name: str) -> None:
+    with pool().connection() as conn:
+        conn.execute(
+            "INSERT INTO profiles (user_id, user_name) VALUES (%s, %s) "
+            "ON CONFLICT (user_id) DO UPDATE SET user_name = EXCLUDED.user_name",
+            (user_id, name.strip()),
+        )
 
 
 def get_summary(user_id: str, thread_id: str) -> dict | None:
@@ -54,6 +69,41 @@ def update_summary(user_id: str, thread_id: str, now: datetime) -> None:
             "UPDATE thread_summaries SET summary = %s, embedding = %s, summarized_up_to = %s "
             "WHERE user_id = %s AND thread_id = %s",
             (text, vec, new[-1]["id"], user_id, thread_id),
+        )
+
+
+@traceable(run_type="llm", name="scrub_summaries")
+def scrub_summaries(user_id: str, what: str) -> int:
+    """After a forget request, rewrite thread summaries that may still mention the forgotten information."""
+    with pool().connection() as conn:
+        rows = conn.execute(
+            "SELECT thread_id, summary FROM thread_summaries WHERE user_id = %s AND summary <> ''", (user_id,)
+        ).fetchall()
+    if not rows:
+        return 0
+    scores = reranker.score(what, [r["summary"] for r in rows])
+    threshold = get_settings().summary_scrub_min_score
+    changed = 0
+    for row, sc in zip(rows, scores, strict=True):
+        if sc < threshold:
+            continue
+        text = llm.complete(
+            [{"role": "user", "content": SCRUB.format(what=what, summary=row["summary"])}], small=True, max_tokens=1200
+        ).strip()
+        with pool().connection() as conn:
+            conn.execute(
+                "UPDATE thread_summaries SET summary = %s, embedding = %s WHERE user_id = %s AND thread_id = %s",
+                (text, embeddings.embed([text])[0], user_id, row["thread_id"]),
+            )
+        changed += 1
+    return changed
+
+
+def mark_profile_dirty(user_id: str) -> None:
+    with pool().connection() as conn:
+        conn.execute(
+            "INSERT INTO profiles (user_id, dirty) VALUES (%s, TRUE) ON CONFLICT (user_id) DO UPDATE SET dirty = TRUE",
+            (user_id,),
         )
 
 

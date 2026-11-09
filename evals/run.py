@@ -119,6 +119,16 @@ def report(results: list[dict], storing: dict, modes: list[str], run_id: str, pa
         f"Answer model: {s.llm_model} | Judge: {s.judge_model} | Questions: {len(results) // max(len(modes), 1)}"
         f" | Replay errors: {errors}",
         "",
+    ]
+    errored = sum(1 for r in results if r["answer"].startswith("ERROR"))
+    if errors or errored:
+        lines += [
+            "",
+            f"> **INVALID RUN**: {errors} replay steps and {errored} questions failed (usually provider rate limits).",
+            "> Scores below are not comparable; rerun (successful LLM calls are cached).",
+        ]
+    lines += [
+        "",
         "| Mode | Answer accuracy | Evidence in context | Text checks | Storing | Avg memory tokens | Avg context ms |",
         "|---|---|---|---|---|---|---|",
     ]

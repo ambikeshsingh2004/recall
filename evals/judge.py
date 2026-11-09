@@ -27,8 +27,11 @@ Decide:
   Mentioning an old value as history is fine if the current value is clearly stated as current.
   For "abstention" questions, true only if the assistant says it does not know and does not invent a value.
   For "instruction_following" questions, true only if the answer follows the behaviour in the expected answer.
+  For "forget" questions, true only if the answer does NOT reveal the information the user asked to forget.
+  For "correction" questions, true only if the answer gives the corrected information, not the wrong one.
 - evidence_present: true if the memory contains the expected supporting evidence.
   For "abstention" questions, true if the memory does not contain a made-up value.
+  For "forget" questions, true if the memory does NOT contain the forgotten information.
 
 Return {{"answer_correct": true/false, "evidence_present": true/false, "reason": "one short sentence"}}"""
 
