@@ -83,6 +83,7 @@ def test_cutoff_keeps_passing_notes_else_falls_back_to_best_few():
     assert [n["id"] for n in kept] == ["a", "d"]
     assert not any(n.get("fallback") for n in kept)
     low = [_note(i) | {"score": s, "final": s} for i, s in (("x", 0.1), ("y", 0.15), ("z", 0.01))]
+    assert select_with_fallback(low, min_score=0.2, top_k=4, fallback_k=0) == []  # default: nothing below cutoff
     fallback = select_with_fallback(low, min_score=0.2, top_k=4, fallback_k=2)
     assert [n["id"] for n in fallback] == ["y", "x"]
     assert all(n["fallback"] for n in fallback)

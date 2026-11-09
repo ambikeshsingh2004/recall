@@ -162,7 +162,7 @@ def select_with_fallback(scored: list[dict], min_score: float, top_k: int, fallb
     stored but scored low (Kaggle test run v2). The answer model already abstains well on its own.
     """
     passing = sorted((c for c in scored if c["score"] >= min_score), key=lambda c: c["final"], reverse=True)
-    if passing:
+    if passing or fallback_k <= 0:
         return passing[:top_k]
     best = sorted(scored, key=lambda c: (c["score"], c["final"]), reverse=True)[:fallback_k]
     return [c | {"fallback": True} for c in best]

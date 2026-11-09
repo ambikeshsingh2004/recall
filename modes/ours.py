@@ -27,7 +27,8 @@ class OursMode(MemoryMode):
         if message.role == "assistant":
             prev = messages.last_user_message(user_id, thread_id, msg_id)
             ids = [prev["id"], msg_id] if prev else [msg_id]
-            rawturns.index_turn(user_id, thread_id, msg_id, message.content, now)  # backup channel (fix 5)
+            if get_settings().use_raw_backup:
+                rawturns.index_turn(user_id, thread_id, msg_id, message.content, now)  # optional backup channel
             self.run_job(storing.store_turn, user_id, thread_id, ids, now)
         return msg_id
 
@@ -36,67 +37,64 @@ class OursMode(MemoryMode):
         threads.rebuild_profile(user_id, now)
 
     def get_context(self, user_id: str, thread_id: str, question: str, now: datetime) -> Context:
-        """Fill the memory budget in priority order: instructions (capped), relevant notes, profile, summaries.
+        """Build what the answer LLM receives (PRD §10.2). Seven parts:
 
-        Notes that answer the question come before the profile: with a tight budget the profile used to take
-        all the space and leave no room for the answer (Kaggle test run, 2026-11-09).
+        System prompt (the fixed assistant instructions, part 1, are added by memory_core.answer):
+          2. Profile                           always (if one exists)
+          3. User instructions                 always (all current instruction notes)
+          4. Thread summaries                  always: current thread + most recently active other thread
+          5. Relevant memories                 notes that pass the reranker minimum, within MEMORY_TOKEN_BUDGET;
+                                               "No relevant memory found." when none pass (FR-R11)
+        Messages (built by thread_messages):
+          6. Recent raw messages of the current thread (last RAW_WINDOW_MESSAGES)
+          7. The new user message
+        The memory budget applies to part 5 only; parts 2-4 are always on and small by design.
         """
         s = get_settings()
-        budget, used = s.memory_token_budget, 0
-        sections: dict[str, str] = {}
-
-        def add(key: str, text: str) -> None:
-            nonlocal used
-            if text and used + estimate_tokens(text) <= budget:
-                sections[key] = text
-                used += estimate_tokens(text)
-
         window = messages.window(user_id, thread_id, s.raw_window_messages)
         if window and window[-1]["role"] == "user" and window[-1]["content"] == question:
             window = window[:-1]  # API flow: the question was saved first (FR-S1)
         user_name = threads.get_user_name(user_id)
         subqueries, analyzed = query.analyze(question, window, now, user_name)
 
-        # 1. Instructions: always on (PRD §8), but capped at a third of the budget so notes keep room.
+        sections: dict[str, str] = {}
+        # 2. Profile
+        if profile := threads.get_profile(user_id):
+            sections["profile"] = f"[Profile]\n{profile}"
+        # 3. User instructions
         if instructions := retrieval.current_instructions(user_id):
-            lines, cap = [], budget // 3
-            for i in instructions:
-                line = f"- {i['text']}"
-                if estimate_tokens("\n".join([*lines, line])) > cap:
-                    break
-                lines.append(line)
-            if lines:
-                add("instructions", "[How the user wants you to behave]\n" + "\n".join(lines))
-        # 2. Notes that answer the question get everything that is left.
+            sections["instructions"] = "[How the user wants you to behave]\n" + "\n".join(
+                f"- {i['text']}" for i in instructions
+            )
+        # 4. Thread summaries: current thread, then the most recently active other thread
+        current = threads.get_summary(user_id, thread_id)
+        if current and current["summary"]:
+            sections["current"] = f"[Earlier in this conversation]\n{current['summary']}"
+        if other := threads.other_recent_summary(user_id, thread_id):
+            sections["other"] = (
+                f"[Other recent conversation, last active {fmt_date(other['last_active_at'])}]\n{other['summary']}"
+            )
+        # 5. Relevant memories: search + merge + rerank, only notes above the minimum score, within the budget
         groups = retrieval.retrieve(
             user_id,
             subqueries,
             now,
-            budget=max(budget - used - 10, 0),
+            budget=s.memory_token_budget,
             exclude_ids={m["id"] for m in window},
             user_name=user_name,
         )
-        add("notes", "[Relevant memories]\n" + retrieval.format_groups(subqueries, groups))
-        # 3. Backup (fix 5): if no note passed the reranker cutoff, add the best raw past message too,
-        #    so Recall never does worse than plain RAG when the note-taker missed something.
+        sections["notes"] = "[Relevant memories]\n" + retrieval.format_groups(subqueries, groups)
+        # Optional (off by default, not one of the seven parts): raw past message when no note passed.
         raw_used = False
         if s.use_raw_backup and retrieval.is_weak(groups):
-            raw_used = self._add_raw_backup(user_id, question, user_name, budget - used - 10, add)
-        # 4. Background context only if space remains.
-        if profile := threads.get_profile(user_id):
-            add("profile", f"[Profile]\n{profile}")
-        current = threads.get_summary(user_id, thread_id)
-        if current and current["summary"]:
-            add("current", f"[Earlier in this conversation]\n{current['summary']}")
-        if other := threads.other_recent_summary(user_id, thread_id):
-            add("other", f"[Other recent conversation, last active {fmt_date(other['last_active_at'])}]\n{other['summary']}")
+            raw_used = self._add_raw_backup(user_id, question, user_name, s.memory_token_budget, sections)
 
-        order = ("profile", "instructions", "other", "current", "notes", "raw")
+        order = ("profile", "instructions", "current", "other", "notes", "raw")
         memory = "\n\n".join(sections[k] for k in order if k in sections)
         notes = [n for g in groups for n in g]
         return Context(
             memory=memory,
-            messages=thread_messages(user_id, thread_id, question),
+            messages=thread_messages(user_id, thread_id, question),  # 6 + 7
             debug={
                 "memory_tokens": estimate_tokens(memory),
                 "analyzed": analyzed,
@@ -112,8 +110,8 @@ class OursMode(MemoryMode):
         )
 
     @staticmethod
-    def _add_raw_backup(user_id: str, question: str, user_name: str | None, room: int, add) -> bool:
-        """Add the best-matching raw past turn, cut to the remaining room. Returns whether one was added."""
+    def _add_raw_backup(user_id: str, question: str, user_name: str | None, room: int, sections: dict) -> bool:
+        """Add the best-matching raw past turn, cut to `room` tokens. Returns whether one was added."""
         if room < 40:
             return False
         turns = rawturns.search(user_id, question, 3)
@@ -122,5 +120,5 @@ class OursMode(MemoryMode):
         scores = reranker.score(retrieval.personalize(question, user_name or "the user"), [t["text"] for t in turns])
         best = max(zip(scores, turns, strict=True), key=lambda pair: pair[0])[1]
         text = best["text"] if estimate_tokens(best["text"]) <= room - 10 else best["text"][: (room - 10) * 4] + " ..."
-        add("raw", "[Possibly relevant past message, verbatim]\n" + text)
+        sections["raw"] = "[Possibly relevant past message, verbatim]\n" + text
         return True
