@@ -152,6 +152,17 @@ def rerank(sq: SubQuery, candidates: list[dict], rng, now: datetime, user_name: 
             sc = max(sc, s.rerank_min_score)  # in the asked-about period: relevant to a time question
         final = sc * (1 + 0.5 * c["importance"]) * recency_factor(c["occurred_at"], now)
         scored.append(c | {"score": round(sc, 3), "final": round(final, 3)})
+    if rng:
+        # Time-window questions ("what happened last week") want EVERY event in the window, not the single
+        # most-relevant one. Relevance ranking drops the others because no specific event matches the vague
+        # query. Return all in-window notes newest-first; fall back to relevance only if none are in-window.
+        in_window = sorted(
+            (c for c in scored if rng[0] <= c["occurred_at"] < rng[1]),
+            key=lambda c: c["occurred_at"],
+            reverse=True,
+        )
+        if in_window:
+            return in_window[: s.time_top_k]
     return select_with_fallback(scored, s.rerank_min_score, s.top_k_per_subquery, s.rerank_fallback_k)
 
 

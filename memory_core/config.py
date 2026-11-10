@@ -52,6 +52,7 @@ class Settings(BaseSettings):
     rerank_candidates: int = 20
     rerank_min_score: float = 0.2
     top_k_per_subquery: int = 4
+    time_top_k: int = 8                    # time-window questions return every event in the window, not top-k
     max_subqueries: int = 3
     memory_token_budget: int = 1500
     raw_window_messages: int = 10
